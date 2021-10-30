@@ -12,13 +12,29 @@ app.controller('indexController', ['$scope', 'indexFactory',($scope, indexFactor
             return false;    
     };
 
-    function initSocket(username){
+    function scrollTop(){
+        setTimeout(() => {
+            const element = document.getElementById('chat-area');
+            element.scrollTop = element.scrollHeight;
+        });
+    }
+
+    function showBubble(id, message){
+        $('#'+ id).find('.message').show().html(message);
+
+        setTimeout(() => {
+            $('#'+ id).find('.message').hide(); 
+        },2000);
+    }
+
+   async function initSocket(username){
         const connectionOptions = {
             reconnectionAttempts: 3,
             reconnectionDelay: 600
         };
-        indexFactory.connectSocket('http://localhost:3000', connectionOptions)
-        .then((socket) => {
+        try{
+       const socket = await indexFactory.connectSocket('http://localhost:3000', connectionOptions)
+        
             socket.emit('newUser', { username });
 
             socket.on('initPlayers', (players) => {
@@ -37,6 +53,7 @@ app.controller('indexController', ['$scope', 'indexFactory',($scope, indexFactor
 
                 $scope.messages.push(messageData);
                 $scope.players[data.id] = data;
+                scrollTop();
                 $scope.$apply();
             });
 
@@ -50,15 +67,23 @@ app.controller('indexController', ['$scope', 'indexFactory',($scope, indexFactor
                 };
                 $scope.messages.push(messageData);
                delete $scope.players[data.id];
+               scrollTop();
                 $scope.$apply();
-                console.log(user);
+                
             })
             socket.on('animate', (data) => {
                 $('#'+ data.socketID).animate({ 'left': data.x, 'top': data.y }, () => {
                     animate = false;
                 });
+               
                 
-            })
+            });
+            socket.on('newMessage', data => {
+                $scope.messages.push(data);
+                $scope.$apply();
+                showBubble(data.socketID, data.text);
+                scrollTop();
+            });
 
             let animate = false;
             $scope.onClickPlayer = ($event) => {
@@ -87,19 +112,19 @@ app.controller('indexController', ['$scope', 'indexFactory',($scope, indexFactor
                 };
                 $scope.messages.push(messageData);
                 $scope.message = "";
-                
 
-                setTimeout(() => {
-                    const element = document.getElementById('chat-area');
-                    element.scrollTop = element.scrollHeight;
-                });
+                socket.emit('newMessage', messageData);
+                showBubble(socket.id, message);
+
+                scrollTop();
                 
             }
             
-        }).catch((err) => {
+        }catch(err){
             console.log(err);
-        });
+        }
     }
+
 
     
 }]);

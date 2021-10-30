@@ -36,13 +36,23 @@ io.on('connection', (socket) => {
     });
 
     socket.on('animate', (data) => {
-        users[socket.id].position.y = data.y;
-        users[socket.id].position.x = data.x;
+        try{
+            users[socket.id].position.y = data.y;
+            users[socket.id].position.x = data.x;
+            
+            socket.broadcast.emit('animate', { socketID: socket.id,
+                x: data.x,
+                y: data.y});
+        }catch(err){
+            console.log(err);
+        }
         
-        socket.broadcast.emit('animate', { socketID: socket.id,
-            x: data.x,
-            y: data.y});
     })
+
+    socket.on('newMessage', data => {
+        const messageData = Object.assign({ socketID: socket.id}, data)
+        socket.broadcast.emit('newMessage', messageData);
+    });
 });
 
 module.exports = socketApi;
